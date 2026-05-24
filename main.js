@@ -7,15 +7,13 @@ let keys = {};
 
 let speed = 0;
 let angle = 0;
-const maxSpeed = 0.75;
+const maxSpeed = 0.5;
 const acceleration = 0.02;
 const friction = 0.96;
-const steerSpeed = 0.03;
+const steerSpeed = 0.02;
 
-// --- VARIABILE PENTRU COLIZIUNI ȘI OPTIMIZARE ---
 let buildingsBoxes = [];
 let carBox = new THREE.Box3();
-// ------------------------------------------------
 
 init();
 animate();
@@ -23,14 +21,14 @@ animate();
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
-  scene.fog = new THREE.FogExp2(0x87ceeb, 0.005); // Adăugat ceață pentru adâncime și performanță cinematică
+  scene.fog = new THREE.FogExp2(0x87ceeb, 0.005);
 
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Umbre mai fine
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
@@ -41,7 +39,7 @@ function init() {
   dirLight.shadow.camera.right = 150;
   dirLight.shadow.camera.top = 150;
   dirLight.shadow.camera.bottom = -150;
-  dirLight.shadow.mapSize.width = 1024; // Optimizat dimensiunea umbrelor pentru performanță
+  dirLight.shadow.mapSize.width = 1024;
   dirLight.shadow.mapSize.height = 1024;
   scene.add(dirLight);
 
@@ -68,7 +66,6 @@ function createModernCity() {
   const roadWidth = 12;
   const blockSize = 50;
 
-  // 1. RANDEALĂ DRUMURI OPTIMIZATĂ (O singură geometrie combinată)
   const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
   const roadsCount = (citySize / blockSize) * 2 + 2;
   const roadInstanced = new THREE.InstancedMesh(new THREE.PlaneGeometry(roadWidth, citySize), roadMaterial, roadsCount);
@@ -76,13 +73,11 @@ function createModernCity() {
   const dummy = new THREE.Object3D();
 
   for (let i = -citySize/2; i <= citySize/2; i += blockSize) {
-    // Drumuri axa Z
     dummy.position.set(i, 0.01, 0);
     dummy.rotation.set(-Math.PI / 2, 0, 0);
     dummy.updateMatrix();
     roadInstanced.setMatrixAt(roadIndex++, dummy.matrix);
 
-    // Drumuri axa X
     dummy.position.set(0, 0.01, i);
     dummy.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
     dummy.updateMatrix();
@@ -91,14 +86,13 @@ function createModernCity() {
   roadInstanced.receiveShadow = true;
   scene.add(roadInstanced);
 
-  // 2. TEXTURĂ PROCEDURALĂ MODERNA PENTRU FERESTRE (Fără imagini externe)
   const canvas = document.createElement('canvas');
   canvas.width = 128;
   canvas.height = 128;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#111111'; // Perete de fundal fațadă
+  ctx.fillStyle = '#111111';
   ctx.fillRect(0, 0, 128, 128);
-  ctx.fillStyle = '#e0f7fa'; // Culoare geamuri luminate reflectant
+  ctx.fillStyle = '#e0f7fa';
   for(let x=10; x<120; x+=25) {
     for(let y=15; y<120; y+=35) {
       ctx.fillRect(x, y, 15, 20);
@@ -108,19 +102,17 @@ function createModernCity() {
   facadeTexture.wrapS = THREE.RepeatWrapping;
   facadeTexture.wrapT = THREE.RepeatWrapping;
 
-  // 3. GENERARE DATE CLĂDIRI PENTRU INSTANCING
   const buildingData = [];
   for (let x = -citySize/2 + blockSize/2; x < citySize/2; x += blockSize) {
     for (let z = -citySize/2 + blockSize/2; z < citySize/2; z += blockSize) {
         if (Math.abs(x) < 25 && Math.abs(z) < 25) continue;
 
-        const h = 15 + Math.random() * 35; // Clădiri mai înalte, zgârie-nori
+        const h = 15 + Math.random() * 35;
         const w = 22;
         const d = 22;
         
         buildingData.push({ x, h, z, w, d });
 
-        // Cutie invizibilă de coliziune calculată matematic (Performanță maximă fără geometrii grele)
         const box = new THREE.Box3(
           new THREE.Vector3(x - w/2, 0, z - d/2),
           new THREE.Vector3(x + w/2, h, z + d/2)
@@ -131,7 +123,6 @@ function createModernCity() {
 
   const totalBuildings = buildingData.length;
 
-  // 4. CREARE INSTANCED MESHES (Pentru performanță de top)
   const wallMat = new THREE.MeshStandardMaterial({ 
     map: facadeTexture, 
     roughness: 0.2, 
@@ -140,14 +131,13 @@ function createModernCity() {
   const roofMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
   const doorMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.6 });
 
-  // Geometrii de bază refolosite
   const geomWall = new THREE.BoxGeometry(1, 1, 1);
   const geomRoof = new THREE.BoxGeometry(1, 0.5, 1);
   const geomDoor = new THREE.BoxGeometry(4, 3, 0.2);
 
   const meshWalls = new THREE.InstancedMesh(geomWall, wallMat, totalBuildings);
   const meshRoofs = new THREE.InstancedMesh(geomRoof, roofMat, totalBuildings);
-  const meshDoors = new THREE.InstancedMesh(geomDoor, doorMat, totalBuildings * 2); // Două uși per clădire
+  const meshDoors = new THREE.InstancedMesh(geomDoor, doorMat, totalBuildings * 2);
 
   meshWalls.castShadow = true;
   meshWalls.receiveShadow = true;
@@ -157,35 +147,27 @@ function createModernCity() {
   const color = new THREE.Color();
 
   buildingData.forEach((b, idx) => {
-    // A. Corpul Clădirii (Pereți + Ferestre)
+
     dummy.position.set(b.x, b.h / 2, b.z);
     dummy.scale.set(b.w, b.h, b.d);
     dummy.rotation.set(0, 0, 0);
     dummy.updateMatrix();
     meshWalls.setMatrixAt(idx, dummy.matrix);
 
-    // Culori moderne unice aplicate procedural per instanță clădire
-    color.setHSL(Math.random() * 0.1 + 0.55, 0.45, Math.random() * 0.3 + 0.4); // Nuanțe moderne de albastru/cyan/gri sticlos
+    color.setHSL(Math.random() * 0.1 + 0.55, 0.45, Math.random() * 0.3 + 0.4);
     meshWalls.setColorAt(idx, color);
 
-    // Repetarea texturii de geamuri scalată corect pe înălțimea clădirii
-    // Notă: Pentru instancing perfect se folosește maparea standard, dar culorile variate oferă diversitate vizuală.
-
-    // B. Acoperiș Modern Margine/Terasă
     dummy.position.set(b.x, b.h + 0.25, b.z);
     dummy.scale.set(b.w + 0.4, 1, b.d + 0.4);
     dummy.updateMatrix();
     meshRoofs.setMatrixAt(idx, dummy.matrix);
 
-    // C. Uși Moderne Față/Spate
-    // Ușa Față
     dummy.position.set(b.x, 1.5, b.z + b.d/2 + 0.05);
     dummy.scale.set(1, 1, 1);
     dummy.rotation.set(0, 0, 0);
     dummy.updateMatrix();
     meshDoors.setMatrixAt(doorIndex++, dummy.matrix);
 
-    // Ușa Spate
     dummy.position.set(b.x, 1.5, b.z - b.d/2 - 0.05);
     dummy.rotation.set(0, Math.PI, 0);
     dummy.updateMatrix();
@@ -201,30 +183,103 @@ function createCar() {
   carGroup = new THREE.Group();
   scene.add(carGroup);
 
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.2 });
-  const cabinMaterial = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.6, roughness: 0.1 });
+  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.1, metalness: 0.8 });
+  const glassMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, transparent: true, opacity: 0.7, roughness: 0.1 });
+  const tireMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+  const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.2 });
+  const lightMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0dd, emissiveIntensity: 1 });
+  const tailLightMaterial = new THREE.MeshStandardMaterial({ color: 0xcc0000, emissive: 0x990000 });
 
-  const base = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 4), bodyMaterial);
-  base.position.y = 0.6;
+  const carBody = new THREE.Group();
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.4, 4.2), bodyMaterial);
+  base.position.y = 0.5;
   base.castShadow = true;
-  carGroup.add(base);
+  base.receiveShadow = true;
+  carBody.add(base);
 
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 2), cabinMaterial);
-  cabin.position.set(0, 1.2, -0.2); 
-  carGroup.add(cabin);
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.35, 1.2), bodyMaterial);
+  hood.position.set(0, 0.775, 1.5);
+  hood.castShadow = true;
+  carBody.add(hood);
 
-  const wheelGeom = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 24);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-  
-  [[-1,0.4,-1.4], [1,0.4,-1.4], [-1,0.4,1.4], [1,0.4,1.4]].forEach(pos => {
-    const wheel = new THREE.Mesh(wheelGeom, wheelMat);
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(pos[0], pos[1], pos[2]);
-    wheel.castShadow = true;
-    carGroup.add(wheel);
-    wheelMeshes.push(wheel);
+  const cabinGeom = new THREE.BufferGeometry();
+  const vertices = new Float32Array([
+
+    -0.8, 0.7,  0.9,   0.8, 0.7,  0.9,  -0.75, 1.3,  0.2,
+     0.8, 0.7,  0.9,   0.75, 1.3,  0.2,  -0.75, 1.3,  0.2,
+    -0.75, 1.3, 0.2,   0.75, 1.3, 0.2,  -0.75, 1.3, -1.2,
+     0.75, 1.3, 0.2,   0.75, 1.3, -1.2, -0.75, 1.3, -1.2,
+    -0.75, 1.3, -1.2,  0.75, 1.3, -1.2, -0.8,  0.7, -1.5,
+     0.75, 1.3, -1.2,  0.8,  0.7, -1.5, -0.8,  0.7, -1.5
+  ]);
+  cabinGeom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  cabinGeom.computeVertexNormals();
+  const cabin = new THREE.Mesh(cabinGeom, bodyMaterial);
+  cabin.castShadow = true;
+  carBody.add(cabin);
+
+  const sideWindows = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.5, 1.3), glassMaterial);
+  sideWindows.position.set(0, 1.0, -0.5);
+  carBody.add(sideWindows);
+
+  const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.05, 0.8), glassMaterial);
+  windshield.position.set(0, 1.05, 0.55);
+  windshield.rotation.x = 0.6;
+  carBody.add(windshield);
+
+  const headlightGeom = new THREE.CylinderGeometry(0.1, 0.1, 0.1, 16);
+  headlightGeom.rotateX(Math.PI / 2);
+  const leftLight = new THREE.Mesh(headlightGeom, lightMaterial);
+  leftLight.position.set(-0.6, 0.75, 2.1);
+  const rightLight = leftLight.clone();
+  rightLight.position.x = 0.6;
+  carBody.add(leftLight, rightLight);
+
+  const tailLightGeom = new THREE.BoxGeometry(0.3, 0.1, 0.05);
+  const leftTail = new THREE.Mesh(tailLightGeom, tailLightMaterial);
+  leftTail.position.set(-0.6, 0.65, -2.1);
+  const rightTail = leftTail.clone();
+  rightTail.position.x = 0.6;
+  carBody.add(leftTail, rightTail);
+
+  const mirrorGeom = new THREE.BoxGeometry(0.15, 0.1, 0.2);
+  const leftMirror = new THREE.Mesh(mirrorGeom, bodyMaterial);
+  leftMirror.position.set(-0.9, 0.9, 0.6);
+  const rightMirror = leftMirror.clone();
+  rightMirror.position.x = 0.9;
+  carBody.add(leftMirror, rightMirror);
+
+  carGroup.add(carBody);
+
+  const wheelPositions = [
+    [-0.85, 0.35, -1.3],
+    [0.85, 0.35, -1.3],
+    [-0.85, 0.35, 1.3],
+    [0.85, 0.35, 1.3]
+  ];
+
+  wheelPositions.forEach(pos => {
+    const wheelGroup = new THREE.Group();
+
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.35, 32), tireMaterial);
+    tire.rotation.z = Math.PI / 2;
+    tire.castShadow = true;
+    wheelGroup.add(tire);
+
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.36, 16), rimMaterial);
+    rim.rotation.z = Math.PI / 2;
+    wheelGroup.add(rim);
+
+    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.44, 0.44), rimMaterial);
+    wheelGroup.add(spoke);
+
+    wheelGroup.position.set(pos[0], pos[1], pos[2]);
+    carGroup.add(wheelGroup);
+    wheelMeshes.push(wheelGroup); 
   });
 }
+
 
 function checkCollisions() {
   carBox.setFromObject(carGroup);
