@@ -14,6 +14,7 @@ const steerSpeed = 0.02;
 
 let buildingsBoxes = [];
 let carBox = new THREE.Box3();
+let speedHud;
 
 init();
 animate();
@@ -30,6 +31,20 @@ function init() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
+
+  speedHud = document.createElement("div");
+  speedHud.style.position = "absolute";
+  speedHud.style.bottom = "20px";
+  speedHud.style.left = "20px";
+  speedHud.style.padding = "10px 14px";
+  speedHud.style.background = "rgba(0,0,0,0.5)";
+  speedHud.style.color = "white";
+  speedHud.style.fontFamily = "Arial";
+  speedHud.style.fontSize = "18px";
+  speedHud.style.borderRadius = "8px";
+  speedHud.style.backdropFilter = "blur(6px)";
+  speedHud.innerHTML = "0 km/h";
+  document.body.appendChild(speedHud);
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -315,6 +330,9 @@ function updateCar() {
     carGroup.rotation.y = angle;
     speed = 0;
   }
+
+const kmh = Math.abs(speed) * 240;
+  speedHud.innerHTML = `${kmh.toFixed(0)} km/h`;
 
   wheelMeshes.forEach((w, i) => {
     w.rotation.x += speed * 0.5;
