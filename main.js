@@ -7,12 +7,14 @@ let keys = {};
 
 let speed = 0;
 let angle = 0;
-const maxSpeed = 0.5;
-const acceleration = 0.02;
+const maxSpeed = 1;
+const acceleration = 0.015;
 const friction = 0.96;
 const steerSpeed = 0.02;
 
 let buildingsBoxes = [];
+let pedestrians = [];
+let pedestriansBoxes = [];
 let carBox = new THREE.Box3();
 let speedHud;
 
@@ -21,8 +23,8 @@ animate();
 
 function init() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb);
-  scene.fog = new THREE.FogExp2(0x87ceeb, 0.005);
+  scene.background = new THREE.Color(0x0a1a2f);
+  scene.fog = new THREE.FogExp2(0x0c1f3a, 0.005);
 
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -61,6 +63,7 @@ function init() {
   createGround();
   createModernCity();
   createCar();
+  createPedestrians();
 
   window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
   window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
@@ -81,70 +84,202 @@ function createModernCity() {
   const roadWidth = 12;
   const blockSize = 50;
 
-  const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
+  const roadMaterial = new THREE.MeshStandardMaterial({
+    color: 0x222222,
+    roughness: 0.5
+  });
+
+  const lineMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.2
+  });
+
   const roadsCount = (citySize / blockSize) * 2 + 2;
-  const roadInstanced = new THREE.InstancedMesh(new THREE.PlaneGeometry(roadWidth, citySize), roadMaterial, roadsCount);
-  let roadIndex = 0;
+
+  const roadGeometry = new THREE.PlaneGeometry(roadWidth, citySize);
+  const roadInstanced = new THREE.InstancedMesh(
+    roadGeometry,
+    roadMaterial,
+    roadsCount
+  );
+
+  const lineWidth = 0.15;
+  const lineLength = 2;
+  const lineGap = 2;
+
+  const linesPerRoad = Math.floor(citySize / (lineLength + lineGap));
+  const totalLines = roadsCount * linesPerRoad;
+
+  const lineGeometry = new THREE.PlaneGeometry(lineWidth, lineLength);
+
+  const lineInstanced = new THREE.InstancedMesh(
+    lineGeometry,
+    lineMaterial,
+    totalLines
+  );
+
+  // ✅ SIDEWALK INSTANCED MESH
+  const sidewalkGeometry = new THREE.PlaneGeometry(blockSize, blockSize);
+  const sidewalkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555555,
+    roughness: 0.9
+  });
+
+  const sidewalkCount =
+    (citySize / blockSize) * (citySize / blockSize);
+
+  const sidewalkMesh = new THREE.InstancedMesh(
+    sidewalkGeometry,
+    sidewalkMaterial,
+    sidewalkCount
+  );
+
   const dummy = new THREE.Object3D();
 
-  for (let i = -citySize/2; i <= citySize/2; i += blockSize) {
+  let roadIndex = 0;
+  let lineIndex = 0;
+  let sidewalkIndex = 0;
+
+  // =========================
+  // ROADS + LINES
+  // =========================
+  for (let i = -citySize / 2; i <= citySize / 2; i += blockSize) {
+
+    // vertical road
     dummy.position.set(i, 0.01, 0);
     dummy.rotation.set(-Math.PI / 2, 0, 0);
     dummy.updateMatrix();
     roadInstanced.setMatrixAt(roadIndex++, dummy.matrix);
 
+    // vertical lane lines
+    for (
+      let z = -citySize / 2 + lineLength / 2;
+      z < citySize / 2;
+      z += lineLength + lineGap
+    ) {
+      dummy.position.set(i, 0.02, z);
+      dummy.rotation.set(-Math.PI / 2, 0, 0);
+      dummy.updateMatrix();
+      lineInstanced.setMatrixAt(lineIndex++, dummy.matrix);
+    }
+
+    // horizontal road
     dummy.position.set(0, 0.01, i);
     dummy.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
     dummy.updateMatrix();
     roadInstanced.setMatrixAt(roadIndex++, dummy.matrix);
-  }
-  roadInstanced.receiveShadow = true;
-  scene.add(roadInstanced);
 
+    // horizontal lane lines
+    for (
+      let x = -citySize / 2 + lineLength / 2;
+      x < citySize / 2;
+      x += lineLength + lineGap
+    ) {
+      dummy.position.set(x, 0.02, i);
+      dummy.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+      dummy.updateMatrix();
+      lineInstanced.setMatrixAt(lineIndex++, dummy.matrix);
+    }
+  }
+
+  // =========================
+  // SIDEWALK (CLEAN GRID)
+  // =========================
+  for (
+    let x = -citySize / 2 + blockSize / 2;
+    x < citySize / 2;
+    x += blockSize
+  ) {
+    for (
+      let z = -citySize / 2 + blockSize / 2;
+      z < citySize / 2;
+      z += blockSize
+    ) {
+
+      dummy.position.set(x, 0.005, z);
+      dummy.rotation.set(-Math.PI / 2, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+
+      sidewalkMesh.setMatrixAt(sidewalkIndex++, dummy.matrix);
+    }
+  }
+
+  // =========================
+  // SHADOWS + SCENE ADD
+  // =========================
+  roadInstanced.receiveShadow = true;
+  lineInstanced.receiveShadow = true;
+
+  sidewalkMesh.receiveShadow = true;
+  sidewalkMesh.castShadow = true;
+
+  scene.add(roadInstanced);
+  scene.add(lineInstanced);
+  scene.add(sidewalkMesh);
+
+  // =========================
+  // BUILDINGS (UNCHANGED)
+  // =========================
   const canvas = document.createElement('canvas');
   canvas.width = 128;
   canvas.height = 128;
   const ctx = canvas.getContext('2d');
+
   ctx.fillStyle = '#111111';
   ctx.fillRect(0, 0, 128, 128);
+
   ctx.fillStyle = '#e0f7fa';
-  for(let x=10; x<120; x+=25) {
-    for(let y=15; y<120; y+=35) {
+  for (let x = 10; x < 120; x += 25) {
+    for (let y = 15; y < 120; y += 35) {
       ctx.fillRect(x, y, 15, 20);
     }
   }
+
   const facadeTexture = new THREE.CanvasTexture(canvas);
   facadeTexture.wrapS = THREE.RepeatWrapping;
   facadeTexture.wrapT = THREE.RepeatWrapping;
 
   const buildingData = [];
-  for (let x = -citySize/2 + blockSize/2; x < citySize/2; x += blockSize) {
-    for (let z = -citySize/2 + blockSize/2; z < citySize/2; z += blockSize) {
-        if (Math.abs(x) < 25 && Math.abs(z) < 25) continue;
 
-        const h = 15 + Math.random() * 35;
-        const w = 22;
-        const d = 22;
-        
-        buildingData.push({ x, h, z, w, d });
+  for (let x = -citySize / 2 + blockSize / 2; x < citySize / 2; x += blockSize) {
+    for (let z = -citySize / 2 + blockSize / 2; z < citySize / 2; z += blockSize) {
 
-        const box = new THREE.Box3(
-          new THREE.Vector3(x - w/2, 0, z - d/2),
-          new THREE.Vector3(x + w/2, h, z + d/2)
-        );
-        buildingsBoxes.push(box);
+      if (Math.abs(x) < 25 && Math.abs(z) < 25) continue;
+
+      const h = 15 + Math.random() * 35;
+      const w = 22;
+      const d = 22;
+
+      buildingData.push({ x, h, z, w, d });
+
+      const box = new THREE.Box3(
+        new THREE.Vector3(x - w / 2, 0, z - d / 2),
+        new THREE.Vector3(x + w / 2, h, z + d / 2)
+      );
+
+      buildingsBoxes.push(box);
     }
   }
 
   const totalBuildings = buildingData.length;
 
-  const wallMat = new THREE.MeshStandardMaterial({ 
-    map: facadeTexture, 
-    roughness: 0.2, 
-    metalness: 0.1 
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: facadeTexture,
+    roughness: 0.2,
+    metalness: 0.1
   });
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
-  const doorMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.6 });
+
+  const roofMat = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.9
+  });
+
+  const doorMat = new THREE.MeshStandardMaterial({
+    color: 0x5a3d28,
+    roughness: 0.6
+  });
 
   const geomWall = new THREE.BoxGeometry(1, 1, 1);
   const geomRoof = new THREE.BoxGeometry(1, 0.5, 1);
@@ -177,13 +312,12 @@ function createModernCity() {
     dummy.updateMatrix();
     meshRoofs.setMatrixAt(idx, dummy.matrix);
 
-    dummy.position.set(b.x, 1.5, b.z + b.d/2 + 0.05);
+    dummy.position.set(b.x, 1.5, b.z + b.d / 2 + 0.05);
     dummy.scale.set(1, 1, 1);
-    dummy.rotation.set(0, 0, 0);
     dummy.updateMatrix();
     meshDoors.setMatrixAt(doorIndex++, dummy.matrix);
 
-    dummy.position.set(b.x, 1.5, b.z - b.d/2 - 0.05);
+    dummy.position.set(b.x, 1.5, b.z - b.d / 2 - 0.05);
     dummy.rotation.set(0, Math.PI, 0);
     dummy.updateMatrix();
     meshDoors.setMatrixAt(doorIndex++, dummy.matrix);
@@ -198,7 +332,17 @@ function createCar() {
   carGroup = new THREE.Group();
   scene.add(carGroup);
 
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.1, metalness: 0.8 });
+  const randomColor = new THREE.Color(
+  Math.random(),
+  Math.random(),
+  Math.random()
+);
+
+const bodyMaterial = new THREE.MeshStandardMaterial({
+  color: randomColor,
+  roughness: 0.1,
+  metalness: 0.8
+});
   const glassMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, transparent: true, opacity: 0.7, roughness: 0.1 });
   const tireMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
   const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.2 });
@@ -295,14 +439,61 @@ function createCar() {
   });
 }
 
+function createPedestrians() {
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xf0c9a5 });
+
+  const bodyGeo = new THREE.CylinderGeometry(0.3, 0.4, 1.6, 8);
+  const headGeo = new THREE.SphereGeometry(0.25, 8, 8);
+
+  const count = 80;
+
+  for (let i = 0; i < count; i++) {
+    const group = new THREE.Group();
+
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.8;
+    body.castShadow = true;
+
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = 1.6;
+    head.castShadow = true;
+
+    group.add(body);
+    group.add(head);
+
+    // poziție random pe hartă
+    const x = (Math.random() - 0.5) * 700;
+    const z = (Math.random() - 0.5) * 700;
+
+    group.position.set(x, 0, z);
+
+    scene.add(group);
+    pedestrians.push(group);
+
+    pedestriansBoxes.push(new THREE.Box3());
+  }
+}
 
 function checkCollisions() {
   carBox.setFromObject(carGroup);
+
+  // clădiri
   for (let i = 0; i < buildingsBoxes.length; i++) {
     if (carBox.intersectsBox(buildingsBoxes[i])) {
       return true;
     }
   }
+
+  // pietoni
+  for (let i = 0; i < pedestrians.length; i++) {
+    pedestriansBoxes[i].setFromObject(pedestrians[i]);
+
+    if (carBox.intersectsBox(pedestriansBoxes[i])) {
+      return true;
+    }
+  }
+
   return false;
 }
 
