@@ -13,10 +13,14 @@ const friction = 0.96;
 const steerSpeed = 0.02;
 
 let buildingsBoxes = [];
-let pedestrians = [];
-let pedestriansBoxes = [];
+let zombies = [];
+let zombiesBoxes = [];
 let carBox = new THREE.Box3();
 let speedHud;
+let zombieHud;
+
+const zombieCount = 80;
+let zombiesRemaining = zombieCount;
 
 init();
 animate();
@@ -48,6 +52,23 @@ function init() {
   speedHud.innerHTML = "0 km/h";
   document.body.appendChild(speedHud);
 
+  zombieHud = document.createElement("div");
+
+  zombieHud.style.position = "absolute";
+  zombieHud.style.top = "20px";
+  zombieHud.style.left = "20px";
+  zombieHud.style.padding = "10px 14px";
+  zombieHud.style.background = "rgba(0,0,0,0.5)";
+  zombieHud.style.color = "#7CFF7C";
+  zombieHud.style.fontFamily = "Arial";
+  zombieHud.style.fontSize = "20px";
+  zombieHud.style.fontWeight = "bold";
+  zombieHud.style.borderRadius = "8px";
+  zombieHud.style.backdropFilter = "blur(6px)";
+  zombieHud.innerHTML = `Zombii rămași: ${zombiesRemaining}`;
+
+  document.body.appendChild(zombieHud);
+
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
   dirLight.position.set(200, 400, 200);
@@ -63,12 +84,67 @@ function init() {
   createGround();
   createModernCity();
   createCar();
-  createPedestrians();
+  createZombies();
 
   window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
   window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
   window.addEventListener("resize", onWindowResize);
 }
+
+function showYouWinPopup() {
+  // Evită duplicarea popup-ului
+  if (document.getElementById("you-win-popup")) return;
+
+  const popup = document.createElement("div");
+  popup.id = "you-win-popup";
+  popup.innerText = "YOU WIN!";
+
+  // Stil arcade
+  popup.style.position = "fixed";
+  popup.style.top = "50%";
+  popup.style.left = "50%";
+  popup.style.transform = "translate(-50%, -50%) scale(0.5)";
+  popup.style.padding = "30px 60px";
+  popup.style.fontSize = "64px";
+  popup.style.fontFamily = "'Press Start 2P', cursive";
+  popup.style.color = "#FFD700";
+  popup.style.background = "rgba(0,0,0,0.85)";
+  popup.style.border = "4px solid #FFD700";
+  popup.style.borderRadius = "12px";
+  popup.style.textAlign = "center";
+  popup.style.zIndex = "9999";
+  popup.style.textShadow = `
+    0 0 10px #FFD700,
+    0 0 20px #FFA500,
+    0 0 40px #FF4500
+  `;
+  popup.style.boxShadow = `
+    0 0 20px #FFD700,
+    0 0 40px #FFA500
+  `;
+  popup.style.opacity = "0";
+  popup.style.transition = "all 0.5s ease";
+
+  document.body.appendChild(popup);
+
+  // Animație popup
+  requestAnimationFrame(() => {
+    popup.style.opacity = "1";
+    popup.style.transform = "translate(-50%, -50%) scale(1)";
+  });
+}
+
+function updateZombieHUD() {
+  zombieHud.innerHTML = `Zombii rămași: ${zombiesRemaining}`;
+
+  if (zombiesRemaining <= 0) {
+    zombieHud.innerHTML = "TOȚI ZOMBII AU FOST ELIMINAȚI!";
+    zombieHud.style.color = "#FFD700";
+
+    showYouWinPopup();
+  }
+}
+
 
 function createGround() {
   const groundGeometry = new THREE.PlaneGeometry(2000, 2000);
@@ -439,9 +515,9 @@ const bodyMaterial = new THREE.MeshStandardMaterial({
   });
 }
 
-function createPedestrians() {
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xf0c9a5 });
+function createZombies() {
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3f5f3f }); // haine verde murdar
+const headMat = new THREE.MeshStandardMaterial({ color: 0x7a8f6a }); // piele zombie gri-verzuie
 
   const bodyGeo = new THREE.CylinderGeometry(0.3, 0.4, 1.6, 8);
   const headGeo = new THREE.SphereGeometry(0.25, 8, 8);
@@ -462,16 +538,36 @@ function createPedestrians() {
     group.add(body);
     group.add(head);
 
-    // poziție random pe hartă
-    const x = (Math.random() - 0.5) * 700;
-    const z = (Math.random() - 0.5) * 700;
+    let x, z;
+    let validPosition = false;
 
-    group.position.set(x, 0, z);
+while (!validPosition) {
+
+  x = (Math.random() - 0.5) * 700;
+  z = (Math.random() - 0.5) * 700;
+
+  validPosition = true;
+
+  for (const box of buildingsBoxes) {
+
+    if (
+      x > box.min.x &&
+      x < box.max.x &&
+      z > box.min.z &&
+      z < box.max.z
+    ) {
+      validPosition = false;
+      break;
+    }
+  }
+}
+
+group.position.set(x, 0, z);
 
     scene.add(group);
-    pedestrians.push(group);
+    zombies.push(group);
 
-    pedestriansBoxes.push(new THREE.Box3());
+    zombiesBoxes.push(new THREE.Box3());
   }
 }
 
@@ -486,15 +582,48 @@ function checkCollisions() {
   }
 
   // pietoni
-  for (let i = 0; i < pedestrians.length; i++) {
-    pedestriansBoxes[i].setFromObject(pedestrians[i]);
+for (let i = zombies.length - 1; i >= 0; i--) {
+  zombiesBoxes[i].setFromObject(zombies[i]);
 
-    if (carBox.intersectsBox(pedestriansBoxes[i])) {
-      return true;
+  if (carBox.intersectsBox(zombiesBoxes[i])) {
+
+    // poziția unde moare zombie-ul
+    const pos = zombies[i].position.clone();
+
+    // =========================
+    // BALTĂ DE "SÂNGE" VERDE
+    // =========================
+    const bloodGeometry = new THREE.CircleGeometry(1.2, 16);
+
+    const bloodMaterial = new THREE.MeshStandardMaterial({
+      color: 0x39ff14, // verde neon
+      transparent: true,
+      opacity: 0.8
+    });
+
+    const blood = new THREE.Mesh(bloodGeometry, bloodMaterial);
+
+    blood.rotation.x = -Math.PI / 2; // pe sol
+    blood.position.set(pos.x, 0.05, pos.z);
+
+    scene.add(blood);
+
+    scene.remove(zombies[i]);
+
+    zombies.splice(i, 1);
+    zombiesBoxes.splice(i, 1);
+
+    zombiesRemaining--;
+
+    if (zombiesRemaining < 0) {
+      zombiesRemaining = 0;
     }
-  }
 
-  return false;
+    updateZombieHUD();
+  }
+}
+
+return false;
 }
 
 function updateCar() {
