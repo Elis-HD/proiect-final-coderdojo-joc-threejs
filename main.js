@@ -92,14 +92,12 @@ function init() {
 }
 
 function showYouWinPopup() {
-  // Evită duplicarea popup-ului
   if (document.getElementById("you-win-popup")) return;
 
   const popup = document.createElement("div");
   popup.id = "you-win-popup";
   popup.innerText = "YOU WIN!";
 
-  // Stil arcade
   popup.style.position = "fixed";
   popup.style.top = "50%";
   popup.style.left = "50%";
@@ -127,7 +125,6 @@ function showYouWinPopup() {
 
   document.body.appendChild(popup);
 
-  // Animație popup
   requestAnimationFrame(() => {
     popup.style.opacity = "1";
     popup.style.transform = "translate(-50%, -50%) scale(1)";
@@ -197,7 +194,6 @@ const lineMaterial = new THREE.MeshStandardMaterial({
     totalLines
   );
 
-  // ✅ SIDEWALK INSTANCED MESH
   const sidewalkGeometry = new THREE.PlaneGeometry(blockSize, blockSize);
   const sidewalkMaterial = new THREE.MeshStandardMaterial({
     color: 0x555555,
@@ -219,18 +215,13 @@ const lineMaterial = new THREE.MeshStandardMaterial({
   let lineIndex = 0;
   let sidewalkIndex = 0;
 
-  // =========================
-  // ROADS + LINES
-  // =========================
   for (let i = -citySize / 2; i <= citySize / 2; i += blockSize) {
 
-    // vertical road
     dummy.position.set(i, 0.01, 0);
     dummy.rotation.set(-Math.PI / 2, 0, 0);
     dummy.updateMatrix();
     roadInstanced.setMatrixAt(roadIndex++, dummy.matrix);
 
-    // vertical lane lines
     for (
       let z = -citySize / 2 + lineLength / 2;
       z < citySize / 2;
@@ -242,13 +233,11 @@ const lineMaterial = new THREE.MeshStandardMaterial({
       lineInstanced.setMatrixAt(lineIndex++, dummy.matrix);
     }
 
-    // horizontal road
     dummy.position.set(0, 0.01, i);
     dummy.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
     dummy.updateMatrix();
     roadInstanced.setMatrixAt(roadIndex++, dummy.matrix);
 
-    // horizontal lane lines
     for (
       let x = -citySize / 2 + lineLength / 2;
       x < citySize / 2;
@@ -261,9 +250,6 @@ const lineMaterial = new THREE.MeshStandardMaterial({
     }
   }
 
-  // =========================
-  // SIDEWALK (CLEAN GRID)
-  // =========================
   for (
     let x = -citySize / 2 + blockSize / 2;
     x < citySize / 2;
@@ -284,9 +270,6 @@ const lineMaterial = new THREE.MeshStandardMaterial({
     }
   }
 
-  // =========================
-  // SHADOWS + SCENE ADD
-  // =========================
   roadInstanced.receiveShadow = true;
   lineInstanced.receiveShadow = true;
 
@@ -297,20 +280,15 @@ const lineMaterial = new THREE.MeshStandardMaterial({
   scene.add(lineInstanced);
   scene.add(sidewalkMesh);
 
-  // =========================
-  // BUILDINGS (UNCHANGED)
-  // =========================
   const canvas = document.createElement('canvas');
 canvas.width = 128;
 canvas.height = 128;
 
 const ctx = canvas.getContext('2d');
 
-// baza cladirii
 ctx.fillStyle = '#2a2a2a';
 ctx.fillRect(0, 0, 128, 128);
 
-// murdarie / pete
 for (let i = 0; i < 200; i++) {
   ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.15})`;
   ctx.fillRect(
@@ -321,17 +299,14 @@ for (let i = 0; i < 200; i++) {
   );
 }
 
-// geamuri
 for (let x = 10; x < 120; x += 25) {
   for (let y = 15; y < 120; y += 35) {
 
     const broken = Math.random() < 0.35;
 
-    // geam normal
     ctx.fillStyle = broken ? '#222' : '#9fc5d1';
     ctx.fillRect(x, y, 15, 20);
 
-    // geam spart
     if (broken) {
       ctx.strokeStyle = '#444';
       ctx.lineWidth = 1;
@@ -349,7 +324,6 @@ for (let x = 10; x < 120; x += 25) {
       ctx.stroke();
     }
 
-    // unele geamuri lipsesc complet
     if (Math.random() < 0.15) {
       ctx.fillStyle = '#111';
       ctx.fillRect(x, y, 15, 20);
@@ -357,7 +331,6 @@ for (let x = 10; x < 120; x += 25) {
   }
 }
 
-// crapaturi in pereti
 for (let i = 0; i < 30; i++) {
 
   const startX = Math.random() * 128;
@@ -382,7 +355,6 @@ for (let i = 0; i < 30; i++) {
   ctx.stroke();
 }
 
-// liane / vegetatie
 for (let i = 0; i < 18; i++) {
 
   const vineX = Math.random() * 128;
@@ -403,7 +375,6 @@ for (let i = 0; i < 18; i++) {
   ctx.stroke();
 }
 
-// graffiti subtil
 ctx.fillStyle = 'rgba(120,20,20,0.35)';
 ctx.font = '10px Arial';
 ctx.fillText('HELP', 20, 90);
@@ -672,29 +643,23 @@ group.position.set(x, 0, z);
 function checkCollisions() {
   carBox.setFromObject(carGroup);
 
-  // clădiri
   for (let i = 0; i < buildingsBoxes.length; i++) {
     if (carBox.intersectsBox(buildingsBoxes[i])) {
       return true;
     }
   }
 
-  // pietoni
 for (let i = zombies.length - 1; i >= 0; i--) {
   zombiesBoxes[i].setFromObject(zombies[i]);
 
   if (carBox.intersectsBox(zombiesBoxes[i])) {
 
-    // poziția unde moare zombie-ul
     const pos = zombies[i].position.clone();
 
-    // =========================
-    // BALTĂ DE "SÂNGE" VERDE
-    // =========================
     const bloodGeometry = new THREE.CircleGeometry(1.2, 16);
 
     const bloodMaterial = new THREE.MeshStandardMaterial({
-      color: 0x39ff14, // verde neon
+      color: 0x8B0000,
       transparent: true,
       opacity: 0.8
     });
