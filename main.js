@@ -26,9 +26,9 @@ init();
 animate();
 
 function init() {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a1a2f);
-  scene.fog = new THREE.FogExp2(0x0c1f3a, 0.005);
+   scene = new THREE.Scene();
+   scene.background = new THREE.Color(0x1b1f1b);
+   scene.fog = new THREE.FogExp2(0x2f3b2f, 0.0125);
 
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -161,15 +161,17 @@ function createModernCity() {
   const blockSize = 50;
 
   const roadMaterial = new THREE.MeshStandardMaterial({
-    color: 0x222222,
-    roughness: 0.5
-  });
+  color: 0x303030,
+  roughness: 0.95,
+  metalness: 0.02
+});
 
-  const lineMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xffffff,
-    emissiveIntensity: 0.2
-  });
+const lineMaterial = new THREE.MeshStandardMaterial({
+  color: 0xbdb79f,
+  roughness: 1,
+  transparent: true,
+  opacity: 0.65
+});
 
   const roadsCount = (citySize / blockSize) * 2 + 2;
 
@@ -299,23 +301,119 @@ function createModernCity() {
   // BUILDINGS (UNCHANGED)
   // =========================
   const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
+canvas.width = 128;
+canvas.height = 128;
 
-  ctx.fillStyle = '#111111';
-  ctx.fillRect(0, 0, 128, 128);
+const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#e0f7fa';
-  for (let x = 10; x < 120; x += 25) {
-    for (let y = 15; y < 120; y += 35) {
+// baza cladirii
+ctx.fillStyle = '#2a2a2a';
+ctx.fillRect(0, 0, 128, 128);
+
+// murdarie / pete
+for (let i = 0; i < 200; i++) {
+  ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.15})`;
+  ctx.fillRect(
+    Math.random() * 128,
+    Math.random() * 128,
+    Math.random() * 8,
+    Math.random() * 8
+  );
+}
+
+// geamuri
+for (let x = 10; x < 120; x += 25) {
+  for (let y = 15; y < 120; y += 35) {
+
+    const broken = Math.random() < 0.35;
+
+    // geam normal
+    ctx.fillStyle = broken ? '#222' : '#9fc5d1';
+    ctx.fillRect(x, y, 15, 20);
+
+    // geam spart
+    if (broken) {
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 15, y + 20);
+
+      ctx.moveTo(x + 15, y);
+      ctx.lineTo(x, y + 20);
+
+      ctx.moveTo(x + 7, y);
+      ctx.lineTo(x + 3, y + 20);
+
+      ctx.stroke();
+    }
+
+    // unele geamuri lipsesc complet
+    if (Math.random() < 0.15) {
+      ctx.fillStyle = '#111';
       ctx.fillRect(x, y, 15, 20);
     }
   }
+}
 
-  const facadeTexture = new THREE.CanvasTexture(canvas);
-  facadeTexture.wrapS = THREE.RepeatWrapping;
-  facadeTexture.wrapT = THREE.RepeatWrapping;
+// crapaturi in pereti
+for (let i = 0; i < 30; i++) {
+
+  const startX = Math.random() * 128;
+  const startY = Math.random() * 128;
+
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+
+  let x = startX;
+  let y = startY;
+
+  for (let j = 0; j < 5; j++) {
+    x += (Math.random() - 0.5) * 10;
+    y += Math.random() * 10;
+
+    ctx.lineTo(x, y);
+  }
+
+  ctx.stroke();
+}
+
+// liane / vegetatie
+for (let i = 0; i < 18; i++) {
+
+  const vineX = Math.random() * 128;
+
+  ctx.strokeStyle = '#355e3b';
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.moveTo(vineX, 0);
+
+  let currentX = vineX;
+
+  for (let y = 0; y < 128; y += 10) {
+    currentX += (Math.random() - 0.5) * 8;
+    ctx.lineTo(currentX, y);
+  }
+
+  ctx.stroke();
+}
+
+// graffiti subtil
+ctx.fillStyle = 'rgba(120,20,20,0.35)';
+ctx.font = '10px Arial';
+ctx.fillText('HELP', 20, 90);
+ctx.fillText('RUN', 70, 45);
+
+const facadeTexture = new THREE.CanvasTexture(canvas);
+
+facadeTexture.wrapS = THREE.RepeatWrapping;
+facadeTexture.wrapT = THREE.RepeatWrapping;
+facadeTexture.magFilter = THREE.NearestFilter;
 
   const buildingData = [];
 
@@ -342,20 +440,20 @@ function createModernCity() {
   const totalBuildings = buildingData.length;
 
   const wallMat = new THREE.MeshStandardMaterial({
-    map: facadeTexture,
-    roughness: 0.2,
-    metalness: 0.1
-  });
+  map: facadeTexture,
+  roughness: 0.95,
+  metalness: 0.02
+});
 
-  const roofMat = new THREE.MeshStandardMaterial({
-    color: 0x333333,
-    roughness: 0.9
-  });
+const roofMat = new THREE.MeshStandardMaterial({
+  color: 0x1b1b1b,
+  roughness: 1
+});
 
-  const doorMat = new THREE.MeshStandardMaterial({
-    color: 0x5a3d28,
-    roughness: 0.6
-  });
+const doorMat = new THREE.MeshStandardMaterial({
+  color: 0x3b2a22,
+  roughness: 1
+});
 
   const geomWall = new THREE.BoxGeometry(1, 1, 1);
   const geomRoof = new THREE.BoxGeometry(1, 0.5, 1);
