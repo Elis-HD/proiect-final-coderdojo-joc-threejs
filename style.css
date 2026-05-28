@@ -9,8 +9,6 @@ html, body {
     color: #ddd;
 }
 
-/* ===== BACKGROUND ===== */
-
 .menu-page,
 .options-page {
     display: flex;
@@ -24,7 +22,6 @@ html, body {
         linear-gradient(to bottom, #0a0a0a, #111, #050505);
 }
 
-/* Fog effect */
 .menu-page::before,
 .options-page::before {
     content: "";
@@ -42,7 +39,6 @@ html, body {
     pointer-events: none;
 }
 
-/* Blood overlay */
 .menu-page::after,
 .options-page::after {
     content: "";
@@ -53,8 +49,6 @@ html, body {
         radial-gradient(circle at 80% 30%, rgba(120,0,0,0.18), transparent 25%);
     pointer-events: none;
 }
-
-/* ===== CITY ===== */
 
 .city-skyline {
     position: absolute;
@@ -71,8 +65,6 @@ html, body {
     opacity: 0.5;
     filter: blur(1px);
 }
-
-/* ===== ROAD ===== */
 
 .road {
     position: absolute;
@@ -101,8 +93,6 @@ html, body {
     opacity: 0.4;
 }
 
-/* ===== FOG ANIMATION ===== */
-
 .lights {
     position: absolute;
     width: 200%;
@@ -118,8 +108,6 @@ html, body {
     100% { transform: translateX(-20%); }
 }
 
-/* ===== MENU CARD ===== */
-
 .menu-card,
 .options-card {
     position: relative;
@@ -134,7 +122,6 @@ html, body {
         0 0 15px rgba(150,0,0,0.35);
 }
 
-/* Cracked/glitch border */
 .menu-card::before,
 .options-card::before {
     content: "";
@@ -143,8 +130,6 @@ html, body {
     border: 1px solid rgba(255,255,255,0.03);
     pointer-events: none;
 }
-
-/* ===== TITLES ===== */
 
 .menu-card h1,
 .options-card h1 {
@@ -158,8 +143,6 @@ html, body {
         0 0 15px rgba(255,0,0,0.5),
         3px 3px 0 #000;
 }
-
-/* ===== BUTTONS ===== */
 
 .menu-card button,
 .back-btn {
@@ -184,7 +167,6 @@ html, body {
     overflow: hidden;
 }
 
-/* Metallic shine */
 .menu-card button::before,
 .back-btn::before {
     content: "";
@@ -217,8 +199,6 @@ html, body {
     transform: scale(0.97);
 }
 
-/* ===== OPTIONS ===== */
-
 .options-card {
     width: 430px;
     color: #ddd;
@@ -236,8 +216,6 @@ html, body {
     letter-spacing: 1px;
     color: #aaa;
 }
-
-/* ===== TOGGLE ===== */
 
 .toggle {
     width: 54px;
@@ -259,8 +237,6 @@ html, body {
     background: #b30000;
     box-shadow: 0 0 10px rgba(255,0,0,0.6);
 }
-
-/* ===== SLIDER ===== */
 
 .slider {
     position: relative;
@@ -293,8 +269,6 @@ html, body {
     cursor: grab;
     box-shadow: 0 0 10px rgba(255,0,0,0.5);
 }
-
-/* ===== HORROR TEXT EFFECT ===== */
 
 @keyframes flicker {
     0% { opacity: 1; }
